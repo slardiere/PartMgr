@@ -1,5 +1,5 @@
 
-create or replace function partition.create_part_trigger
+create or replace function @extschema@.create_part_trigger
   (
     p_schemaname text,
     p_tablename  text
@@ -15,11 +15,11 @@ declare
 begin 
  
   select t.keycolumn, p.to_char_pattern into v_column, v_pattern 
-    from partition.table t join partition.pattern p on t.pattern=p.id 
+    from @extschema@.part_table t join @extschema@.part_pattern p on t.pattern=p.id 
     where t.schemaname = p_schemaname and t.tablename = p_tablename ;  
   if FOUND then
 
-    execute 'create or replace function partition.partitionne_'||p_schemaname||'_'||p_tablename||'()
+    execute 'create or replace function @extschema@.partitionne_'||p_schemaname||'_'||p_tablename||'()
 returns trigger
 language plpgsql 
 as $PART$
@@ -46,7 +46,7 @@ $PART$ ; ' ;
 
   execute 'create trigger _partitionne before insert on '
       ||p_schemaname||'.'||p_tablename||' for each row '
-      ||'execute procedure partition.partitionne_' 
+      ||'execute procedure @extschema@.partitionne_' 
       ||p_schemaname||'_'||p_tablename||'() ; ' ; 
 
   end if ; 
@@ -57,7 +57,7 @@ $BODY$
 ; 
 
 
-create or replace function partition.set_trigger_def()
+create or replace function @extschema@.set_trigger_def()
 returns trigger
 language plpgsql
 as $BODY$
@@ -77,7 +77,7 @@ begin
 	and t.tgname != '_partitionne'
     loop
 
-      insert into partition.trigger values (  r_trigg.nspname, r_trigg.relname, r_trigg.tgname, r_trigg.triggerdef ) ; 
+      insert into @extschema@.part_trigger values (  r_trigg.nspname, r_trigg.relname, r_trigg.tgname, r_trigg.triggerdef ) ; 
 
       execute 'drop trigger ' || r_trigg.tgname || ' on ' || r_trigg.nspname  || '.' ||  r_trigg.relname  ; 
 
@@ -88,6 +88,6 @@ begin
 end ;
 $BODY$ ; 
 
-create trigger _settrigg after insert on partition.table 
+create trigger _settrigg after insert on @extschema@.part_table 
 for each row 
-execute procedure partition.set_trigger_def() ; 
+execute procedure @extschema@.set_trigger_def() ; 

@@ -3,7 +3,8 @@ drop database part;
 create database part;
 \c part
 
-\i partition.sql
+create schema partmgr;
+create extension partmgr schema partmgr;
 
 begin ; 
 drop schema if exists test cascade ;
@@ -97,23 +98,23 @@ commit ;
 
 begin ; 
 
-truncate table partition.table cascade ; 
-insert into partition.table (schemaname, tablename, keycolumn, pattern, cleanable, retention_period)  values
+truncate table partmgr.part_table cascade ; 
+insert into partmgr.part_table (schemaname, tablename, keycolumn, pattern, cleanable, retention_period)  values
           ('test','test1an','ev_date','Y','t','3 year'),
           ('test','test1mois','ev_date','M','f', null),
           ('test','test_mois','ev_date','M','t', '1 month'),
           ('test','test1week','ev_date','W','t','3 weeks'),
           ('test','test1jour','ev_date','D','t','2 month') ;
 
-select partition.create_part_trigger('test','test1an') ;
-select partition.create_part_trigger('test','test1mois') ;
-select partition.create_part_trigger('test','test1week') ;
-select partition.create_part_trigger('test','test1jour') ;
-select partition.create_part_trigger('test','test_mois') ;
+select partmgr.create_part_trigger('test','test1an') ;
+select partmgr.create_part_trigger('test','test1mois') ;
+select partmgr.create_part_trigger('test','test1week') ;
+select partmgr.create_part_trigger('test','test1jour') ;
+select partmgr.create_part_trigger('test','test_mois') ;
 
-select * from partition.create ( (current_date - interval '6 month')::date  , (current_date + interval '3 day')::date ) ;
+select * from partmgr.create ( (current_date - interval '6 month')::date  , (current_date + interval '3 day')::date ) ;
 
-select * from partition.create ('test','test1mois', (current_date - interval '12 month')::date  , (current_date + interval '3 day')::date ) ;
+select * from partmgr.create ('test','test1mois', (current_date - interval '12 month')::date  , (current_date + interval '3 day')::date ) ;
 
 commit ; 
 
@@ -158,21 +159,21 @@ commit ;
 
 \dt test.
 
-select partition.drop() ; 
+select partmgr.drop() ; 
 
 
 -- stupid test about _partitionne trigger. Never do that ! 
 begin;
-create temp table temptrg (like  partition.trigger);
-insert into temptrg select * from partition.trigger ;
-delete from partition.trigger ;
-delete from partition.table ;
-insert into partition.table (schemaname, tablename, keycolumn, pattern, cleanable, retention_period)  values
+create temp table temptrg (like  partmgr.part_trigger);
+insert into temptrg select * from partmgr.part_trigger ;
+delete from partmgr.part_trigger ;
+delete from partmgr.part_table ;
+insert into partmgr.part_table (schemaname, tablename, keycolumn, pattern, cleanable, retention_period)  values
           ('test','test1an','ev_date','Y','t','3 year'),
           ('test','test1mois','ev_date','M','f', null),
           ('test','test_mois','ev_date','M','t', '1 month'),
           ('test','test1week','ev_date','W','t','3 weeks'),
           ('test','test1jour','ev_date','D','t','2 month') ;
-insert into partition.trigger select * from temptrg ;
-select * from partition.trigger;
+insert into partmgr.part_trigger select * from temptrg ;
+select * from partmgr.part_trigger;
 commit;  

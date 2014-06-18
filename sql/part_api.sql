@@ -1,5 +1,5 @@
 
-create or replace function partition.between(
+create or replace function @extschema@.between(
   i_period text, 
   begin_date date, 
   end_date date
@@ -28,7 +28,7 @@ end ;
 $$ ;
 
 
-create or replace function partition.create
+create or replace function @extschema@.create
 (
 	i_schema text,
 	i_table text,
@@ -67,7 +67,7 @@ as $BODY$
 
  
     FOR pmonth IN SELECT (begin_date + x * ('1 '||i_period)::interval )::date
-                    FROM generate_series(0, partition.between(i_period, begin_date, end_date ) ) x
+                    FROM generate_series(0, @extschema@.between(i_period, begin_date, end_date ) ) x
     LOOP
         loval := date_trunc( i_period , pmonth)::date;
         hival := (loval + ('1 '||i_period)::interval )::date;
@@ -125,7 +125,7 @@ as $BODY$
 
           -- create trigger           
           for v_triggerdef in select replace( triggerdef,  qname ,  i_schema || '.' || spart  ) 
-             from partition.trigger 
+             from @extschema@.part_trigger 
              where schemaname= i_schema and tablename = i_table
           loop
             execute v_triggerdef ; 
@@ -143,7 +143,7 @@ as $BODY$
           end if ; 
  
           -- grant role 
-          select partition.setgrant( i_schema, i_table, '_' || to_char ( pmonth , i_pattern ) ) into t_grants ; 
+          select @extschema@.setgrant( i_schema, i_table, '_' || to_char ( pmonth , i_pattern ) ) into t_grants ; 
           grants = grants + t_grants ; 
 
         exception when duplicate_table then
@@ -162,7 +162,7 @@ $BODY$
 
 ;
 
-create or replace function partition.create
+create or replace function @extschema@.create
 (
 	i_schema text,
 	i_table text,
@@ -195,12 +195,12 @@ begin
   o_grants = 0 ; 
 
   for p_table in select t.schemaname, t.tablename, t.keycolumn, p.part_type, p.to_char_pattern 
-                   from partition.table t , partition.pattern p 
+                   from @extschema@.part_table t , @extschema@.part_pattern p 
                   where t.pattern=p.id and t.actif and t.schemaname = i_schema and t.tablename = i_table 
                   order by schemaname, tablename 
     loop 
 
-    select * from partition.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, begin_date, end_date ) 
+    select * from @extschema@.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, begin_date, end_date ) 
       into tables, indexes, triggers, grants ; 
 
     o_tables = o_tables + tables ;
@@ -216,7 +216,7 @@ end ;
 $BODY$
 ;
 
-create or replace function partition.create
+create or replace function @extschema@.create
 (
 	begin_date    date,
 	end_date       date,
@@ -247,12 +247,12 @@ begin
   o_grants = 0 ; 
 
   for p_table in select t.schemaname, t.tablename, t.keycolumn, p.part_type, p.to_char_pattern 
-                   from partition.table t , partition.pattern p 
+                   from @extschema@.part_table t , @extschema@.part_pattern p 
                   where t.pattern=p.id and t.actif 
                   order by schemaname, tablename 
     loop 
 
-    select * from partition.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, begin_date, end_date ) 
+    select * from @extschema@.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, begin_date, end_date ) 
       into tables, indexes, triggers, grants ; 
 
     o_tables = o_tables + tables ;
@@ -268,7 +268,7 @@ end ;
 $BODY$
 ;
 
-create or replace function partition.create
+create or replace function @extschema@.create
 (
 	begin_date date,
 	OUT tables integer,
@@ -278,11 +278,11 @@ create or replace function partition.create
 )
 returns record 
 as $BODY$
-  select * from partition.create( $1 , $1 ) ;
+  select * from @extschema@.create( $1 , $1 ) ;
 $BODY$
 LANGUAGE sql ;
 
-create or replace function partition.create
+create or replace function @extschema@.create
 (
 	OUT tables integer,
 	OUT indexes integer,
@@ -291,11 +291,11 @@ create or replace function partition.create
 )
 returns record 
 as $BODY$
-  select * from partition.create( current_date ) ;
+  select * from @extschema@.create( current_date ) ;
 $BODY$
  LANGUAGE sql ;
 
-create or replace function partition.create_next
+create or replace function @extschema@.create_next
 (
 	OUT o_tables  integer,
 	OUT o_indexes integer, 
@@ -323,8 +323,8 @@ begin
   o_grants = 0 ; 
 
   for p_table in select t.schemaname, t.tablename, t.keycolumn, p.part_type, p.to_char_pattern, (now() + p.next_part)::date as pdate 
-                   from partition.table t 
-                     inner join partition.pattern p
+                   from @extschema@.part_table t 
+                     inner join @extschema@.part_pattern p
 		           on ( t.pattern=p.id )                   
 	             full join pg_tables pgt
 			   on ( pgt.schemaname=t.schemaname 
@@ -334,7 +334,7 @@ begin
 		      ||'_'|| to_char ( now() + p.next_part , p.to_char_pattern  ) 
     loop 
 
-    select * from partition.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, p_table.pdate, p_table.pdate) 
+    select * from @extschema@.create( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, p_table.pdate, p_table.pdate) 
       into tables, indexes, triggers, grants ; 
 
     o_tables = o_tables + tables ;
@@ -350,7 +350,7 @@ end ;
 $BODY$
 ;
 
-create or replace function partition.drop
+create or replace function @extschema@.drop
 (
 	i_schema text,
 	i_table text,
@@ -379,7 +379,7 @@ as $BODY$
  
     -- raise notice 'i_schema %, i_table %, i_column %, i_period %, i_pattern %, retention_date %',i_schema, i_table, i_column, i_period, i_pattern, i_retention_date  ; 
  
-    perform schemaname, tablename from partition.table where schemaname=i_schema and tablename=i_table and cleanable ; 
+    perform schemaname, tablename from @extschema@.part_table where schemaname=i_schema and tablename=i_table and cleanable ; 
     if found then
 
       -- look up for older partition to drop 
@@ -389,7 +389,7 @@ as $BODY$
           from pg_tables where schemaname=i_schema and tablename ~ ('^'||i_table||'_[0-9]{'||length( i_pattern )||'}') ;
 
       FOR pmonth IN SELECT (begin_date + x * ('1 '||i_period)::interval )::date
-                      FROM generate_series(0, partition.between(i_period, begin_date, i_retention_date ) ) x
+                      FROM generate_series(0, @extschema@.between(i_period, begin_date, i_retention_date ) ) x
       LOOP
           loval := date_trunc( i_period , pmonth)::date;
           hival := (loval + ('1 '||i_period)::interval  )::date;
@@ -418,7 +418,7 @@ as $BODY$
 $BODY$
 ;
 
-create or replace function partition.drop
+create or replace function @extschema@.drop
 (
 	OUT o_tables  integer
 )
@@ -435,12 +435,12 @@ begin
 
   for p_table in select t.schemaname, t.tablename, t.keycolumn, p.part_type, p.to_char_pattern, 
                         current_date - t.retention_period as retention_date  
-                   from partition.table t , partition.pattern p 
+                   from @extschema@.part_table t , @extschema@.part_pattern p 
                   where t.pattern=p.id and t.actif and t.cleanable 
                   order by schemaname, tablename 
     loop 
 
-    select * from partition.drop( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, p_table.retention_date::date ) 
+    select * from @extschema@.drop( p_table.schemaname, p_table.tablename, p_table.keycolumn, p_table.part_type, p_table.to_char_pattern, p_table.retention_date::date ) 
       into tables ; 
 
     o_tables = o_tables + tables ;
@@ -453,7 +453,7 @@ end ;
 $BODY$
 ;
 
-create or replace function partition.check_next_part
+create or replace function @extschema@.check_next_part
 (
   OUT nagios_return_code int, 
   OUT message text 
@@ -467,8 +467,8 @@ from ( select
   t.schemaname ||'.'|| t.tablename 
     ||'_'|| to_char ( now() + p.next_part , p.to_char_pattern  ) 
     as missing_tables  
-  from partition.table t 
-    inner join partition.pattern p
+  from @extschema@.part_table t 
+    inner join @extschema@.part_pattern p
       on ( t.pattern=p.id )                   
     full join pg_tables pgt
       on ( pgt.schemaname=t.schemaname 
@@ -482,7 +482,7 @@ from ( select
 $BODY$ ; 
 
 
-create or replace function partition.grant_replace( p_acl text, p_grant text, p_ext_grant text )
+create or replace function @extschema@.grant_replace( p_acl text, p_grant text, p_ext_grant text )
 returns text 
 language plpgsql 
 as $BODY$
@@ -502,7 +502,7 @@ begin
 end; 
 $BODY$ ; 
 
-create or replace function partition.grant( acl text, tablename text )
+create or replace function @extschema@.grant( acl text, tablename text )
 returns text 
 language plpgsql 
 as $BODY$
@@ -517,13 +517,13 @@ begin
 
   v_grant = 'GRANT ' ; 
 
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'r','SELECT' ); 
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'w','UPDATE' ); 
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'a','INSERT' ); 
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'd','DELETE' );
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'D','TRUNCATE' );
-  v_grant =  v_grant || partition.grant_replace( v_acl, 'x','REFERENCES' ); 
-  v_grant =  v_grant || partition.grant_replace( v_acl, 't','TRIGGER' ); 
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'r','SELECT' ); 
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'w','UPDATE' ); 
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'a','INSERT' ); 
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'd','DELETE' );
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'D','TRUNCATE' );
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 'x','REFERENCES' ); 
+  v_grant =  v_grant || @extschema@.grant_replace( v_acl, 't','TRIGGER' ); 
  
   v_grant =  v_grant || ' ON TABLE ' || tablename || ' TO ' || v_grantee ;  
 
@@ -531,7 +531,7 @@ begin
 end; 
 $BODY$ ; 
 
-create or replace function partition.setgrant( p_schemaname text, p_tablename text, p_part text )
+create or replace function @extschema@.setgrant( p_schemaname text, p_tablename text, p_part text )
 returns int 
 language plpgsql 
 as $BODY$
@@ -553,7 +553,7 @@ begin
     then
       for i in array_lower( v_acl, 1)..array_upper( v_acl, 1 ) 
       loop
-        select partition.grant(  v_acl[i], p_schemaname||'.'||p_tablename||p_part ) into v_grant ; 
+        select @extschema@.grant(  v_acl[i], p_schemaname||'.'||p_tablename||p_part ) into v_grant ; 
         execute v_grant ; 
         -- raise notice 'ACL : % % ', i, v_acl[i] ; 
         -- raise notice 'GRANT : % % ', i, v_grant ;
@@ -566,11 +566,104 @@ begin
 end; 
 $BODY$ ; 
 
-create or replace function partition.version( )
+create or replace function @extschema@.version( )
 returns text
 language sql 
 as $$
-select '0.1'::text
+select '0.9'::text
 $$ ;
 
 
+
+create or replace function @extschema@.create_part_trigger
+  (
+    p_schemaname text,
+    p_tablename  text
+  )
+returns void
+language plpgsql 
+as $BODY$
+declare
+  part text ;
+  v_insert text ; 
+  v_column text ;
+  v_pattern text ; 
+begin 
+ 
+  select t.keycolumn, p.to_char_pattern into v_column, v_pattern 
+    from @extschema@.part_table t join @extschema@.part_pattern p on t.pattern=p.id 
+    where t.schemaname = p_schemaname and t.tablename = p_tablename ;  
+  if FOUND then
+
+    execute 'create or replace function @extschema@.partitionne_'||p_schemaname||'_'||p_tablename||'()
+returns trigger
+language plpgsql 
+as $PART$
+ declare
+   part text ;
+   v_column text ;
+   v_pattern text ; 
+ begin 
+   IF TG_OP = ''INSERT''
+   THEN
+
+     SELECT to_char( NEW.'|| v_column ||', ' || quote_literal( v_pattern  ) ||  ') INTO part ;
+ 
+     execute ''INSERT INTO '' || TG_TABLE_SCHEMA || ''.'' || TG_TABLE_NAME || ''_'' || part 
+       || '' SELECT ('' || quote_literal(textin(record_out(NEW)))
+       || ''::'' || TG_TABLE_SCHEMA || ''.'' || TG_TABLE_NAME || '').*;'' ;
+ 
+     RETURN null ;
+   else
+     return new ; 
+   END IF;
+ end ; 
+$PART$ ; ' ; 
+
+  execute 'create trigger _partitionne before insert on '
+      ||p_schemaname||'.'||p_tablename||' for each row '
+      ||'execute procedure @extschema@.partitionne_' 
+      ||p_schemaname||'_'||p_tablename||'() ; ' ; 
+
+  end if ; 
+
+
+end ;
+$BODY$
+; 
+
+
+create or replace function @extschema@.set_trigger_def()
+returns trigger
+language plpgsql
+as $BODY$
+declare
+  r_trigg record ; 
+begin
+  set local search_path to pg_catalog ; 
+  if TG_OP = 'INSERT' then 
+    for r_trigg in select n.nspname, c.relname, t.tgname, 
+                          pg_get_triggerdef( t.oid ) as triggerdef
+      from pg_class c 
+        join pg_namespace n on c.relnamespace=n.oid
+        join pg_trigger t on c.oid=t.tgrelid 
+        where c.relkind='r' 
+        and ( t.tgconstraint is null or t.tgconstraint = 0 )
+        and n.nspname = new.schemaname and c.relname = new.tablename 
+	and t.tgname != '_partitionne'
+    loop
+
+      insert into @extschema@.part_trigger values (  r_trigg.nspname, r_trigg.relname, r_trigg.tgname, r_trigg.triggerdef ) ; 
+
+      execute 'drop trigger ' || r_trigg.tgname || ' on ' || r_trigg.nspname  || '.' ||  r_trigg.relname  ; 
+
+    end loop ; 
+
+  end if ; 
+  return new ; 
+end ;
+$BODY$ ; 
+
+create trigger _settrigg after insert on @extschema@.part_table 
+for each row 
+execute procedure @extschema@.set_trigger_def() ; 

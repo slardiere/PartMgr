@@ -1,0 +1,3 @@
+default_version = '0.9'
+comment = 'PostgreSQL Partition Manager'
+relocatable = false
