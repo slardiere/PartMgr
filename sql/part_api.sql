@@ -124,7 +124,7 @@ as $BODY$
           end loop ; 
 
           -- create trigger           
-          for v_triggerdef in select replace( triggerdef,  qname ,  i_schema || '.' || spart  ) 
+          for v_triggerdef in select replace( triggerdef,  qname || ' ' ,  i_schema || '.' || spart || ' ' ) 
              from @extschema@.part_trigger 
              where schemaname= i_schema and tablename = i_table
           loop
