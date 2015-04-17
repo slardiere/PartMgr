@@ -1,55 +1,61 @@
 Partmgr
 =======
-Partmgr is a set of tables and functions wrote to help the management 
+
+Partmgr is a set of tables and functions wrote to help the management
 of partitionning tables in PostgreSQL databases.
 
-The partition key is a date, matching a table's attribute. It is possible
-to set up a retention period 
+The partition key is a date, matching a table's attribute. It is
+possible to set up a retention period
 
-Partmgr's tables are catalog which contains informations about partition type, tables and triggers
+Partmgr's tables are catalog which contains informations about
+partition type, tables and triggers
 
-Functions can manage trigger creation, partition, drop, and monitoring. 
+Functions can manage trigger creation, partition, drop, and
+monitoring.
 
 Tables ( catalog )
 --------------------
+
 Tables are in "partition" schema :
 
-  - ``partmgr.pattern`` : partition's type
-  - ``partmgr."table"`` : partitionning tables
-  - ``partmgr.trigger`` : trigger's partitionning tables
+  - ``partition.part_pattern`` : partition's type
+  - ``partition.part_table`` : partitionning tables
+  - ``partition.part_trigger`` : trigger's partitionning tables
 
-Table ``pattern``  contiens some partitioning patterns. Until there no new pattern, 
-there is no need to modify it. Different patterns, and therefore
-partition types are: `` year ``, `` month ``, `` `` week, and `` day ``.
+Table ``part_pattern`` contiens some partitioning patterns. Until
+there no new pattern, there is no need to modify it. Different
+patterns, and therefore partition types are: ``year``, ``month``,
+``week``, and ``day``.
 
-Table ``table`` contains user's tables, and must be set by the user.
+Table ``part_table`` contains user's tables, and must be set by the user.
 
-La table ``trigger`` contains partition table's triggers. Filling this table is automatically 
-done when the user set up a new partition table. 
+La table ``part_trigger`` contains partition table's triggers. Filling
+this table is automatically done when the user set up a new partition
+table.
 
 Liste des fonctions
 --------------------
-  - ``fonction partmgr.between()`` : compute unit number betwenn two date fon a given pattern. 
-  - ``fonctions partmgr.create()`` : create the partitions
+  - ``fonction partition.between()`` : compute unit number betwenn two date fon a given pattern. 
+  - ``fonctions partition.create()`` : create the partitions
 
-    -  ``partmgr.create()`` : generic function, which create partitions for all tables, at the current date.
-    -  ``partmgr.create( date)`` : create partitions for all tables, at the given date.
-    -  ``partmgr.create( begin_date, end_date )`` : create partitions for all tables, at the given period.
-    -  ``partmgr.create( schema, table, begin_date, end_date )`` : create partitions for the given table, at the given period. 
-    -  ``partmgr.create( schema, table, column, period, pattern, begin_date, end_date )`` : low-level function fonction, 
+    -  ``partition.create()`` : generic function, which create partitions for all tables, at the current date.
+    -  ``partition.create( date)`` : create partitions for all tables, at the given date.
+    -  ``partition.create( begin_date, end_date )`` : create partitions for all tables, at the given period.
+    -  ``partition.create( schema, table, begin_date, end_date )`` : create partitions for the given table, at the given period. 
+    -  ``partition.create( schema, table, column, period, pattern, begin_date, end_date )`` : low-level function fonction, 
 called by all ``create`` functions. 
 
-  - ``function partmgr.create_next()`` : create next functions of all tables. The next period depends of current date, 
+  - ``function partition.create_next()`` : create next functions of all tables. The next period depends of current date, 
 plus ``next_part`` interval from pattern. This fonction could called by a scheduler like cron.
-  - ``function partmgr.drop()`` : drop partition, if permit by setup.
-  - ``function partmgr.check_next_part()`` : had to be called by Nagios plugin. Can monitoring if next partition exists.
+  - ``function partition.drop()`` : drop partition, if permit by setup.
+  - ``function partition.check_next_part()`` : had to be called by Nagios plugin. Can monitoring if next partition exists.
 
-  - ``function partmgr.grant_replace( p_acl text, p_grant text, p_ext_grant text )`` : 
-  - ``function partmgr.grant( acl text, tablename text )`` : 
-  - ``function partmgr.setgrant( p_schemaname text, p_tablename text, p_part text )`` : used by ``partmgr.create()`` to apply grants on partitions. 
+  - ``function partition.grant_replace( p_acl text, p_grant text, p_ext_grant text )`` : 
+  - ``function partition.grant( acl text, tablename text )`` : 
+  - ``function partition.setgrant( p_schemaname text, p_tablename text, p_part text )`` : used by ``partition.create()`` to apply grants on partitions. 
 
-  - ``function partmgr.create_part_trigger()`` : create partitioning triggers, and create the trigger on the partition.
-  - ``function partmgr.set_trigger_def()`` : Trigger function which copy trigger definition from mother table to catalog. Triggered on ``partmgr."table"``
+  - ``function partition.create_part_trigger()`` : create partitioning triggers, and create the trigger on the partition.
+  - ``function partition.set_trigger_def()`` : Trigger function which copy trigger definition from mother table to catalog. Triggered on ``partition."table"``
 
 Tutorial
 ````````
@@ -62,61 +68,65 @@ Install PartMgr as extension. It make the schema, tables and functions, and fill
   $ make
   $ make install
   $ psql -Upostgres dbname
-  # create schema partmgr ;
-  # create extension partmgr WITH SCHEMA partmgr ;
+  # create schema partition ;
+  # create extension partmgr WITH SCHEMA partition ;
 
 If Partmgr was already use before, migrate from old installation ::
 
   $ make
   $ make install
   $ psql -Upostgres dbname
-  # create schema partmgr ;
-  # create extension partmgr WITH SCHEMA partmgr from unpackaged;
-  # drop schema partition cascade ;
+  # create schema partition ;
+  # create extension partmgr WITH SCHEMA partition from unpackaged;
+  # drop schema partmgr cascade ;
 
 
 Setup
 :::::
 
-There is two opérations needed to setup up partitionning table. One is insertion into ``partmgr."table"`` ::
+There is two opérations needed to setup up partitionning table. One is
+insertion into ``partition.part_table`` ::
 
-  INSERT INTO partmgr."table" ( schemaname, tablename, keycolumn, pattern, actif, cleanable, retention_period)
+  INSERT INTO partition.part_table ( schemaname, tablename, keycolumn, pattern, actif, cleanable, retention_period)
     values ('test', 'test1mois', 'ev_date', 'M', 't', 'f', null),
            ('test', 'test_mois', 'ev_date', 'M', 't', 't', '1 mon') ;
 
-Triggers on this table are inserted into ``partmgr.trigger`` to be auto-added on partmgr. 
-These triggers won't be present on the mother table.
+Triggers on this table are inserted into ``partition.part_trigger`` to
+be auto-added on partition.  These triggers won't be present on the
+mother table.
 
-Privileges setted up on the mother table are automatically applied on partitions.
+Privileges setted up on the mother table are automatically applied on
+partitions.
 
 The second step is creation and setup of partitionning trigger ::
 
-  SELECT partmgr.create_part_trigger('schema_name','table_name');
+  SELECT partition.create_part_trigger('schema_name','table_name');
 
-This function make the specific function trigger for the table given. The new trigger function is
-created in the  ``partition`` and the trigger ``_partitionne`` is created on the table. 
+This function make the specific function trigger for the table
+given. The new trigger function is created in the ``partition`` schema
+and the trigger ``_partitionne`` is created on the table.
 
 Partition Creation
 ::::::::::::::::::
 
-Then, the set of partition should be created with ``partmgr.create()`` functions ::
+Then, the set of partition should be created with ``partition.create()`` functions ::
   
-  part=$ select * from partmgr.create('2012-09-01','2012-11-01') ;
+  part=$ select * from partition.create('2012-09-01','2012-11-01') ;
    o_tables | o_indexes | o_triggers | o_grants 
   ----------+-----------+------------+----------
          74 |        74 |         65 |      126
   (1 row)
 
-  part=$ select * from partmgr.create('test','test_mois','2012-11-01','2013-03-01') ;
+  part=$ select * from partition.create('test','test_mois','2012-11-01','2013-03-01') ;
    o_tables | o_indexes | o_triggers | o_grants 
   ----------+-----------+------------+----------
           4 |         4 |          0 |        4
   (1 row)
 
 
-then dropped by ``partmgr.drop()`` function ::
+then dropped by ``partition.drop()`` function ::
   
-  part=$ select * from partmgr.drop() ;
+  part=$ select * from partition.drop() ;
    o_tables 
   ----------
           0
@@ -127,27 +137,28 @@ Only partitions ``cleanable``  and whose retention period has passed will be del
 Schedule Creation
 :::::::::::::::::
 
-The creation of the next partitions, the next month or the next day, can be
-created simply with the ``partmgr.create_next ()``. This function is based on the
-``next_part`` column of the table ``partmgr.pattern`` to determine the date of the partition
-to create.
+The creation of the next partitions, the next month or the next day,
+can be created simply with the ``partition.create_next ()``. This
+function is based on the ``next_part`` column of the table
+``partition.part_pattern`` to determine the date of the partition to
+create.
 
 Monitoring
 ::::::::::
 
-``partmgr.check_next_part()`` function allows monitoring from Nagios ::
+``partition.check_next_part()`` function allows monitoring from Nagios ::
   
-  part=$ select * from partmgr.check_next_part() ;
+  part=$ select * from partition.check_next_part() ;
    nagios_return_code |              message              
   --------------------+-----------------------------------
                     2 | Missing : test.test1jour_20120628
   (1 row)
-  part=$ select * from partmgr.create('test','test1jour','2012-06-28','2012-06-29') ;
+  part=$ select * from partition.create('test','test1jour','2012-06-28','2012-06-29') ;
    o_tables | o_indexes | o_triggers | o_grants 
   ----------+-----------+------------+----------
           2 |         2 |          2 |        4
   (1 row)
-  part=$ select * from partmgr.check_next_part() ;
+  part=$ select * from partition.check_next_part() ;
    nagios_return_code | message 
   --------------------+---------
                     0 | 
