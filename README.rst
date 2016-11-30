@@ -33,7 +33,7 @@ La table ``part_trigger`` contains partition table's triggers. Filling
 this table is automatically done when the user set up a new partition
 table.
 
-Liste des fonctions
+Functions list
 --------------------
 
   - ``fonction partmgr.between()`` : compute unit number betwenn two date fon a given pattern. 
@@ -73,7 +73,7 @@ functions, and fill the table ::
   # create schema partmgr ;
   # create extension partmgr WITH SCHEMA partmgr ;
 
-If Partmgr was already use before, migrate from old installation ::
+If Partmgr was already used before, migrate from old installation ::
 
   $ make
   $ make install
@@ -86,7 +86,7 @@ If Partmgr was already use before, migrate from old installation ::
 Setup
 :::::
 
-There is two opérations needed to setup up partitionning table. One is
+There is two operations needed to setup up partitionning table. One is
 insertion into ``partmgr.part_table`` ::
 
   INSERT INTO partmgr.part_table ( schemaname, tablename, keycolumn, pattern, actif, cleanable, retention_period)
@@ -94,7 +94,7 @@ insertion into ``partmgr.part_table`` ::
            ('test', 'test_mois', 'ev_date', 'M', 't', 't', '1 mon') ;
 
 Triggers on this table are inserted into ``partmgr.part_trigger`` to
-be auto-added on partition.  These triggers won't be present on the
+be auto-added on partition. These triggers won't be present on the
 mother table.
 
 Privileges setted up on the mother table are automatically applied on
@@ -104,8 +104,8 @@ The second step is creation and setup of partitionning trigger ::
 
   SELECT partmgr.create_part_trigger('schema_name','table_name');
 
-This function make the specific function trigger for the table
-given. The new trigger function is created in the ``partmgr`` schema
+This function make the specific function trigger for the given
+table. The new trigger function is created in the ``partmgr`` schema
 and the trigger ``_partitionne`` is created on the table.
 
 Partition Creation
