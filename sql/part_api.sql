@@ -135,7 +135,7 @@ as $BODY$
           select a.rolname, user into v_owner, v_current_role  
             from pg_class c 
               join pg_namespace n on c.relnamespace=n.oid 
-              join pg_authid a on c.relowner=a.oid 
+              join pg_roles a on c.relowner=a.oid 
             where n.nspname= i_schema and c.relname= i_table ;
 
           if v_owner <> v_current_role then
