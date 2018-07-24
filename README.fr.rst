@@ -3,16 +3,16 @@ Partmgr
 Partmgr est un ensemble de tables et de procédures stockées écrites pour
 faciliter la gestion des tables partitionnées dans les bases de données.
 
-La clé de partitionnement est une date (Année, Mois, Semaine ou Jour), 
+La clé de partitionnement est une date (Année, Mois, Semaine ou Jour),
 correspondant à un attribut de la table. Il est possible de déterminer
 une période de rétention.
 
-Les tables de PartMgr sont des catalogues contenant des informations sur 
-les types de partitions, les tables concernées et les triggers associées à ces 
+Les tables de PartMgr sont des catalogues contenant des informations sur
+les types de partitions, les tables concernées et les triggers associées à ces
 tables.
 
-Les procédures stockées permettent de gérer la création des triggers de 
-partitionnement et des partitions, la suppression d'anciennes partitions 
+Les procédures stockées permettent de gérer la création des triggers de
+partitionnement et des partitions, la suppression d'anciennes partitions
 et la surveillance de la présence des futures partitions.
 
 Tables ( catalogue )
@@ -22,6 +22,11 @@ Les tables sont dans un schéma "partition" :
   - ``partmgr.part_pattern`` : type de partitions
   - ``partmgr.part_table`` : tables partitionnées
   - ``partmgr.part_trigger`` : triggers des tables partitionnées
+
+pour la version 10 de PostgreSQL :
+
+  - ``partmgr.part_index`` : index des tables partitionnées
+  - ``partmgr.part_fkey`` : clées étrangères des tables partitionnées
 
 La table ``part_pattern`` contient les différents patterns de
 partitionnement. Sauf lors de l'ajout de nouveaux patterns, il n'y a
@@ -40,7 +45,7 @@ Liste des fonctions
 
  - ``fonction partmgr.between()`` : determine le nombre d'unités
       comprises entre deux dates pour un type de partition donné
- - ``fonctions partmgr.create()`` : créer les partitions 
+ - ``fonctions partmgr.create()`` : créer les partitions
 
   - ``partmgr.create()`` : fonction générique, qui crée les
       partitions de toutes les tables, à la date courante.
@@ -65,6 +70,8 @@ Liste des fonctions
    quotidiennement dans un planificateur tel que cron.
  - ``function partmgr.drop()`` : supprimme les partitions, si la
    configuration le permet
+ - ``function partmgr.detach()`` : à partir de la version 10 de
+   PostgreSQL, détache les partitions, si la configuration le permet
  - ``function partmgr.check_next_part()`` : destiné à être appelée
       par une sonde Nagios, permet de surveiller la présence des
       prochaines partitions utiles
@@ -116,6 +123,12 @@ Il y a 2 opérations necessaire. La première est l'insertion des tables
     values ('test', 'test1mois', 'ev_date', 'M', 't', 'f', null),
            ('test', 'test_mois', 'ev_date', 'M', 't', 't', '1 mon') ;
 
+A partir de la version 10 de PostgreSQL, les partitions natives sont
+gérées, et détachables :
+
+  INSERT INTO partmgr.part_table ( schemaname, tablename, keycolumn, pattern, actif, detachable, retention_period)
+    values ('test', 'test1mois', 'ev_date', 'M', 't', 'f', null) ;
+
 Les triggers présent sur ces tables sont enregistrés dans la table
 ``partmgr.part_trigger`` pour être automatiquement ajouté sur les
 partitions. À noter que ces triggers ne seront plus présent sur la
@@ -132,29 +145,32 @@ Cette fonction génère la fonction trigger spécifique à la table passée
 en parametre.  La fonction trigger est crée dans le schéma
 ``partmgr`` et le trigger ``_partitionne`` est créé sur la table.
 
+Dans le cas de l'utilisation des partitions natives de PostgreSQL 10,
+cet appel est inutile.
+
 Création des partitions
 :::::::::::::::::::::::
 
 Ensuite, l'ensemble des partitions peuvent être crées avec les
 fonctions ``partmgr.create()`` ::
-  
+
   part=$ select * from partmgr.create('2012-09-01','2012-11-01') ;
-   o_tables | o_indexes | o_triggers | o_grants 
+   o_tables | o_indexes | o_triggers | o_grants
   ----------+-----------+------------+----------
          74 |        74 |         65 |      126
   (1 row)
 
   part=$ select * from partmgr.create('test','test_mois','2012-11-01','2013-03-01') ;
-   o_tables | o_indexes | o_triggers | o_grants 
+   o_tables | o_indexes | o_triggers | o_grants
   ----------+-----------+------------+----------
           4 |         4 |          0 |        4
   (1 row)
 
 
 puis supprimées avec la fonction ``partmgr.drop()`` ::
-  
+
   part=$ select * from partmgr.drop() ;
-   o_tables 
+   o_tables
   ----------
           0
   (1 row)
@@ -162,6 +178,16 @@ puis supprimées avec la fonction ``partmgr.drop()`` ::
 Seules les partitions ``cleanable`` et dont la période de rétention
 est passée seront supprimées.
 
+De la même manière, il est possible de détacher les partitions natives :
+
+  part=$ select * from partmgr.detach() ;
+   o_tables
+  ----------
+          0
+  (1 row)
+
+Seules les partitions ``detachable`` et dont la période de rétention
+est passée seront détachées.
 
 Planifier la création
 :::::::::::::::::::::
@@ -175,21 +201,20 @@ date de la partition a créer.
 Monitoring
 ::::::::::
 
-La fonction ``partmgr.check_next_part()`` permet la surveillance depuis Nagios :: 
-  
+La fonction ``partmgr.check_next_part()`` permet la surveillance depuis Nagios ::
+
   part=$ select * from partmgr.check_next_part() ;
-   nagios_return_code |              message              
+   nagios_return_code |              message
   --------------------+-----------------------------------
                     2 | Missing : test.test1jour_20120628
   (1 row)
   part=$ select * from partmgr.create('test','test1jour','2012-06-28','2012-06-29') ;
-   o_tables | o_indexes | o_triggers | o_grants 
+   o_tables | o_indexes | o_triggers | o_grants
   ----------+-----------+------------+----------
           2 |         2 |          2 |        4
   (1 row)
   part=$ select * from partmgr.check_next_part() ;
-   nagios_return_code | message 
+   nagios_return_code | message
   --------------------+---------
-                    0 | 
+                    0 |
   (1 row)
-
