@@ -99,8 +99,8 @@ références :
 $ make
 $ make install
 $ psql -Upostgres dbname
-# create schema partmgr ;
-# create extension partmgr WITH SCHEMA partmgr ;
+=# create schema partmgr ;
+=# create extension partmgr WITH SCHEMA partmgr ;
 ```
 
 Si Partmgr a déjà été installé, migrer depuis l'installation existante ::
@@ -109,9 +109,9 @@ Si Partmgr a déjà été installé, migrer depuis l'installation existante ::
 $ make
 $ make install
 $ psql -Upostgres dbname
-# create schema partmgr ;
-# create extension partmgr WITH SCHEMA partmgr from unpackaged;
-# drop schema partition. cascade ;
+=# create schema partmgr ;
+=# create extension partmgr WITH SCHEMA partmgr from unpackaged;
+=# drop schema partition. cascade ;
 ```
 
 ## Configuration

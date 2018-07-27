@@ -72,8 +72,8 @@ functions, and fill the table ::
 $ make
 $ make install
 $ psql -Upostgres dbname
-# create schema partmgr ;
-# create extension partmgr WITH SCHEMA partmgr ;
+=# create schema partmgr ;
+=# create extension partmgr WITH SCHEMA partmgr ;
 ```
 
 If Partmgr was already used before, migrate from old installation ::
@@ -82,9 +82,9 @@ If Partmgr was already used before, migrate from old installation ::
 $ make
 $ make install
 $ psql -Upostgres dbname
-# create schema partmgr ;
-# create extension partmgr WITH SCHEMA partmgr from unpackaged;
-# drop schema partition cascade ;
+=# create schema partmgr ;
+=# create extension partmgr WITH SCHEMA partmgr from unpackaged;
+=# drop schema partition cascade ;
 ```
 
 ## Setup
