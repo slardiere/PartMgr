@@ -40,9 +40,13 @@ La table `part_trigger` contient la liste des triggers associés aux
 tables partitionnées. Elle est renseignée automatiquement lors de la
 configuration d'une nouvelle table partitionnée.
 
+À partir de PostgreSQL 11, les tables `partmgr.part_trigger`,
+`partmgr.part_index` et `partmgr.part_fkey`, car les clés étrangères,
+index et triggers sont géres par PostgreSQL.
+
 ## Liste des fonctions
 
- - `fonction partmgr.between()` : determine le nombre d'unités
+ - `fonction partmgr.between()` : détermine le nombre d'unités
       comprises entre deux dates pour un type de partition donné
  - `fonctions partmgr.create()` : créer les partitions
 
@@ -86,6 +90,10 @@ configuration d'une nouvelle table partitionnée.
       permettant de copier les triggers de la table mère sur les
       partitions. Déclenché à l'insertion dans
       `partmgr.part_table`
+
+À partir de PostreSQL 11, les données ne sont plus partitionnées par
+trigger, donc la fonction `partmgr.create_part_trigger()` est inutile.
+
 
 # Tutoriel
 

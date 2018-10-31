@@ -152,6 +152,37 @@ select * from partmgr.create('test','testpart', (current_date - interval '12 mon
 
 commit ;
 
+begin ;
+-- v11 partitioning test
+
+CREATE TABLE test.testfk11( id bigint primary key ) ;
+
+CREATE  TABLE  IF NOT EXISTS test.testpart11
+(
+   id bigserial,
+   dateev date not null default current_date ,
+   t text,
+   y boolean not null,
+   i bigint references test.testfk11( id ),
+   n numeric(13,3)
+)
+ PARTITION BY RANGE (dateev) ;
+
+CREATE INDEX ON test.testpart ( n ) ;
+create trigger _delev after delete on test.testpart11 for each row execute procedure test.test_trigger();
+
+grant select, update on test.testpart to test ;
+
+insert into partmgr.part_table (schemaname, tablename, keycolumn, pattern, cleanable, detachable, retention_period)
+values
+          ('test','testpart11','dateev','M','f','t', '6 month');
+
+
+select * from partmgr.create('test','testpart11', (current_date - interval '12 month')::date  , (current_date + interval '3 month')::date );
+
+commit ;
+
+
 select * from partmgr.detach();
 
 

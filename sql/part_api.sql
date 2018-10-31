@@ -77,7 +77,10 @@ as $BODY$
         spart = i_table || '_' || to_char ( pmonth , i_pattern );
 
         begin
-          if current_setting('server_version_num')::integer >= 100000 and (select relkind = 'p' from pg_class join pg_namespace on relnamespace = pg_namespace.oid where relname = i_table and nspname= i_schema ) then
+          if current_setting('server_version_num')::integer >= 100000
+             and (select relkind = 'p' from pg_class join pg_namespace on relnamespace = pg_namespace.oid
+                      where relname = i_table and nspname= i_schema )
+            then
             -- V10 create partition
             execute ' create table ' || i_schema || '.' || spart
             || ' PARTITION OF  ' || qname
@@ -85,23 +88,24 @@ as $BODY$
 
             tables := tables + 1 ;
 
-            -- create index
-            for v_indexdef in select replace( indexdef,  qname || ' ' ,  i_schema || '.' || spart || ' ' )
-               from @extschema@.part_index
-               where schemaname= i_schema and tablename = i_table
-            loop
-              execute v_indexdef ;
-              indexes := indexes + 1;
-            end loop ;
-
-
-            -- create fkey
-            for v_fkeydef in select replace( fkeydef,  qname || ' ' ,  i_schema || '.' || spart || ' ' )
-               from @extschema@.part_fkey
-               where schemaname= i_schema and tablename = i_table
-            loop
-              execute v_fkeydef ;
-            end loop ;
+            if current_setting('server_version_num')::integer < 110000
+            then
+              -- create index
+              for v_indexdef in select replace( indexdef,  qname || ' ' ,  i_schema || '.' || spart || ' ' )
+                from @extschema@.part_index
+                where schemaname= i_schema and tablename = i_table
+              loop
+                execute v_indexdef ;
+                indexes := indexes + 1;
+              end loop ;
+              -- create fkey
+              for v_fkeydef in select replace( fkeydef,  qname || ' ' ,  i_schema || '.' || spart || ' ' )
+                 from @extschema@.part_fkey
+                 where schemaname= i_schema and tablename = i_table
+              loop
+                execute v_fkeydef ;
+              end loop ;
+            end if;
 
           else -- version < 10 ou partitionnement non natif
             execute ' create table ' || i_schema || '.' || spart || ' ( '
@@ -137,8 +141,11 @@ as $BODY$
             END LOOP;
           end if ;
 
-          -- create fk
-          FOR v_constraint IN select ' add '||pg_get_constraintdef( con.oid , true )
+
+          if current_setting('server_version_num')::integer < 110000
+          then
+            -- create fk
+            FOR v_constraint IN select ' add '||pg_get_constraintdef( con.oid , true )
                                 from pg_constraint con
                                     join pg_class c
                                       on con.conrelid=c.oid
@@ -147,9 +154,10 @@ as $BODY$
                                     where con.contype='f'
                                       and n.nspname = i_schema
                                       and c.relname = i_table
-          loop
-            execute ' ALTER TABLE ' || i_schema || '.' || spart ||  v_constraint ;
-          end loop ;
+            loop
+              execute ' ALTER TABLE ' || i_schema || '.' || spart ||  v_constraint ;
+            end loop ;
+          end if ;
 
           -- create trigger
           for v_triggerdef in select replace( triggerdef,  qname || ' ' ,  i_schema || '.' || spart || ' ' )

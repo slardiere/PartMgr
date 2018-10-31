@@ -32,9 +32,13 @@ patterns, and therefore partition types are: `year`, `month`,
 
 Table `part_table` contains user's tables, and must be set by the user.
 
-La table `part_trigger` contains partition table's triggers. Filling
+Table `part_trigger` contains partition table's triggers. Filling
 this table is automatically done when the user set up a new partition
 table.
+
+From PostgreSQL 11, there is no need of `partmgr.part_trigger`,
+`partmgr.part_index` and `partmgr.part_fkey`, since Foreign Key,
+Indexes and Triggers are automatically managed by PostgreSQL.
 
 ## Functions list
 
@@ -59,7 +63,10 @@ plus `next_part` interval from pattern. This fonction could called by a schedule
   - `function partmgr.create_part_trigger()` : create partitioning triggers, and create the trigger on the partmgr.
   - `function partmgr.set_trigger_def()` : Trigger function which copy
     trigger definition from mother table to catalog. Triggered on
-    `partmgr.prt_table`
+    `partmgr.part_table`
+
+From PostreSQL 10, since partitionning datas does not use trigger
+anymore, the function `partmgr.create_part_trigger()` is useless.
 
 # Tutorial
 
